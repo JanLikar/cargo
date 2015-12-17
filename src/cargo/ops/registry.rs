@@ -34,9 +34,9 @@ pub fn publish(manifest_path: &Path,
                verify: bool) -> CargoResult<()> {
     let pkg = try!(Package::for_path(&manifest_path, config));
 
-    if *pkg.private() {
-        bail!("private crates cannot be published to crates.io.\n\
-        `{}` is a private crate", pkg.name());
+    if pkg.private() {
+        bail!("private crates cannot be published to this repository.\n\
+               `{}` is a private crate", pkg.name());
     }
 
     let (mut registry, reg_id) = try!(registry(config, token, index));

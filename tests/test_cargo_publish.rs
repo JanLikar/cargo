@@ -152,7 +152,7 @@ test!(private_crate {
 
     assert_that(p.cargo_process("publish"),
                 execs().with_status(101).with_stderr("\
-private crates cannot be published to crates.io.
+private crates cannot be published to this repository.
 `foo` is a private crate
 "));
 });
