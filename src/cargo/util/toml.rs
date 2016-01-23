@@ -254,7 +254,7 @@ pub struct TomlProject {
     links: Option<String>,
     exclude: Option<Vec<String>>,
     include: Option<Vec<String>>,
-    private: Option<bool>,
+    publish: Option<bool>,
 
     // package metadata
     description: Option<String>,
@@ -548,8 +548,8 @@ impl TomlManifest {
         let exclude = project.exclude.clone().unwrap_or(Vec::new());
         let include = project.include.clone().unwrap_or(Vec::new());
 
-        let private = project.private.clone().unwrap_or(false);
-        
+        let publish = project.publish.clone().unwrap_or(true);
+
         let summary = try!(Summary::new(pkgid, deps,
                                         self.features.clone()
                                             .unwrap_or(HashMap::new())));
@@ -572,7 +572,7 @@ impl TomlManifest {
                                          project.links.clone(),
                                          metadata,
                                          profiles,
-                                         private);
+                                         publish);
         if project.license_file.is_some() && project.license.is_some() {
             manifest.add_warning(format!("warning: only one of `license` or \
                                                    `license-file` is necessary"));

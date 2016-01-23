@@ -139,20 +139,20 @@ dependency `bar` does not specify a version
 "));
 });
 
-test!(private_crate {
+test!(unpublishable_crate {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
             name = "foo"
             version = "0.0.1"
             authors = []
-            private = true
+            publish = false
         "#)
         .file("src/main.rs", "fn main() {}");
 
     assert_that(p.cargo_process("publish"),
                 execs().with_status(101).with_stderr("\
-private crates cannot be published to this repository.
-`foo` is a private crate
+this crate cannot be published to a repository.
+`foo` is marked as unpublishable
 "));
 });

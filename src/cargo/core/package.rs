@@ -77,7 +77,7 @@ impl Package {
     pub fn package_id(&self) -> &PackageId { self.manifest.package_id() }
     pub fn root(&self) -> &Path { self.manifest_path.parent().unwrap() }
     pub fn summary(&self) -> &Summary { self.manifest.summary() }
-    pub fn private(&self) -> bool { self.manifest.private() }
+    pub fn publish(&self) -> bool { self.manifest.publish() }
     pub fn targets(&self) -> &[Target] { self.manifest().targets() }
     pub fn version(&self) -> &Version { self.package_id().version() }
 
