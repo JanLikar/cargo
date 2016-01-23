@@ -106,7 +106,7 @@ impl<'cfg> PathSource<'cfg> {
         let mut filter = |p: &Path| {
             let relative_path = util::without_prefix(p, &root).unwrap();
             include.iter().any(|p| p.matches_path(&relative_path)) || {
-                include.len() == 0 &&
+                include.is_empty() &&
                  !exclude.iter().any(|p| p.matches_path(&relative_path))
             }
         };
@@ -161,8 +161,11 @@ impl<'cfg> PathSource<'cfg> {
             opts.pathspec(suffix);
         }
         let statuses = try!(repo.statuses(Some(&mut opts)));
-        let untracked = statuses.iter().map(|entry| {
-            (join(&root, entry.path_bytes()), None)
+        let untracked = statuses.iter().filter_map(|entry| {
+            match entry.status() {
+                git2::STATUS_WT_NEW => Some((join(&root, entry.path_bytes()), None)),
+                _ => None
+            }
         });
 
         'outer: for (file_path, is_dir) in index_files.chain(untracked) {
@@ -241,7 +244,7 @@ impl<'cfg> PathSource<'cfg> {
             let loc = pkg.root();
             try!(PathSource::walk(loc, &mut ret, true, filter));
         }
-        return Ok(ret);
+        Ok(ret)
     }
 
     fn walk(path: &Path, ret: &mut Vec<PathBuf>,
@@ -272,7 +275,7 @@ impl<'cfg> PathSource<'cfg> {
             }
             try!(PathSource::walk(&dir, ret, false, filter));
         }
-        return Ok(())
+        Ok(())
     }
 }
 
@@ -309,7 +312,7 @@ impl<'cfg> Source for PathSource<'cfg> {
 
         Ok(self.packages.iter()
            .filter(|pkg| ids.iter().any(|id| pkg.package_id() == id))
-           .map(|pkg| pkg.clone())
+           .cloned()
            .collect())
     }
 

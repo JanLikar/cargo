@@ -4,6 +4,7 @@ use std::env;
 use std::ffi::OsString;
 use std::fs::{self, File};
 use std::io::prelude::*;
+use std::io;
 use std::path::{Path, PathBuf};
 
 use toml;
@@ -222,7 +223,15 @@ fn read_crate_list(path: &Path) -> CargoResult<CrateListingV1> {
     let metadata = path.join(".crates.toml");
     let mut f = match File::open(&metadata) {
         Ok(f) => f,
-        Err(..) => return Ok(CrateListingV1 { v1: BTreeMap::new() }),
+        Err(e) => {
+            if e.kind() == io::ErrorKind::NotFound {
+                return Ok(CrateListingV1 { v1: BTreeMap::new() });
+            }
+            return Err(e).chain_error(|| {
+                human(format!("failed to open crate metadata at `{}`",
+                              metadata.display()))
+            });
+        }
     };
     (|| -> CargoResult<_> {
         let mut contents = String::new();
@@ -303,7 +312,7 @@ pub fn uninstall(root: Option<&str>,
             }
         }
 
-        if bins.len() == 0 {
+        if bins.is_empty() {
             to_remove.extend(installed.get().iter().map(|b| dst.join(b)));
             installed.get_mut().clear();
         } else {
@@ -312,7 +321,7 @@ pub fn uninstall(root: Option<&str>,
                 installed.get_mut().remove(bin);
             }
         }
-        if installed.get().len() == 0 {
+        if installed.get().is_empty() {
             installed.remove();
         }
     }

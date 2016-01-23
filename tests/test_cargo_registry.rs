@@ -1,8 +1,7 @@
 use std::fs::{self, File};
 use std::io::prelude::*;
-use cargo::util::process;
 
-use support::{project, execs, cargo_dir};
+use support::{project, execs};
 use support::{UPDATING, DOWNLOADING, COMPILING, PACKAGING, VERIFYING, ADDING, REMOVING};
 use support::paths::{self, CargoPathExt};
 use support::registry::{self, Package};
@@ -563,10 +562,7 @@ test!(dev_dependency_not_used {
 test!(login_with_no_cargo_dir {
     let home = paths::home().join("new-home");
     fs::create_dir(&home).unwrap();
-    assert_that(process(&cargo_dir().join("cargo"))
-                       .arg("login").arg("foo").arg("-v")
-                       .cwd(&paths::root())
-                       .env("HOME", &home),
+    assert_that(::cargo_process().arg("login").arg("foo").arg("-v"),
                 execs().with_status(0));
 });
 
@@ -935,4 +931,28 @@ test!(bundled_crate_in_registry {
         .publish();
 
     assert_that(p.cargo("run"), execs().with_status(0));
+});
+
+test!(update_same_prefix_oh_my_how_was_this_a_bug {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "ugh"
+            version = "0.5.0"
+            authors = []
+
+            [dependencies]
+            foo = "0.1"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+
+    Package::new("foobar", "0.2.0").publish();
+    Package::new("foo", "0.1.0")
+        .dep("foobar", "0.2.0")
+        .publish();
+
+    assert_that(p.cargo("generate-lockfile"), execs().with_status(0));
+    assert_that(p.cargo("update").arg("-pfoobar").arg("--precise=0.2.0"),
+                execs().with_status(0));
 });

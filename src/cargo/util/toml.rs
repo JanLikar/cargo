@@ -138,7 +138,7 @@ pub fn to_manifest(contents: &[u8],
         match *toml {
             toml::Value::Table(ref table) => {
                 for (k, v) in table.iter() {
-                    add_unused_keys(m, v, if key.len() == 0 {
+                    add_unused_keys(m, v, if key.is_empty() {
                         k.clone()
                     } else {
                         key.clone() + "." + k
@@ -516,11 +516,11 @@ impl TomlManifest {
 
             // Collect the deps
             try!(process_dependencies(&mut cx, self.dependencies.as_ref(),
-                                      |dep| dep));
+                                      |dep| dep, &mut warnings));
             try!(process_dependencies(&mut cx, self.dev_dependencies.as_ref(),
-                                      |dep| dep.set_kind(Kind::Development)));
+                                      |dep| dep.set_kind(Kind::Development), &mut warnings));
             try!(process_dependencies(&mut cx, self.build_dependencies.as_ref(),
-                                      |dep| dep.set_kind(Kind::Build)));
+                                      |dep| dep.set_kind(Kind::Build), &mut warnings));
 
             if let Some(targets) = self.target.as_ref() {
                 for (name, platform) in targets.iter() {
@@ -528,19 +528,19 @@ impl TomlManifest {
                                               platform.dependencies.as_ref(),
                                               |dep| {
                         dep.set_only_for_platform(Some(name.clone()))
-                    }));
+                    }, &mut warnings));
                     try!(process_dependencies(&mut cx,
                                               platform.build_dependencies.as_ref(),
                                               |dep| {
                         dep.set_only_for_platform(Some(name.clone()))
                            .set_kind(Kind::Build)
-                    }));
+                    }, &mut warnings));
                     try!(process_dependencies(&mut cx,
                                               platform.dev_dependencies.as_ref(),
                                               |dep| {
                         dep.set_only_for_platform(Some(name.clone()))
                            .set_kind(Kind::Development)
-                    }));
+                    }, &mut warnings));
                 }
             }
         }
@@ -668,7 +668,8 @@ fn validate_bench_name(target: &TomlTarget) -> CargoResult<()> {
 
 fn process_dependencies<F>(cx: &mut Context,
                            new_deps: Option<&HashMap<String, TomlDependency>>,
-                           mut f: F) -> CargoResult<()>
+                           mut f: F,
+                           warnings: &mut Vec<String>) -> CargoResult<()>
     where F: FnMut(DependencyInner) -> DependencyInner
 {
     let dependencies = match new_deps {
@@ -684,6 +685,13 @@ fn process_dependencies<F>(cx: &mut Context,
             }
             TomlDependency::Detailed(ref details) => details.clone(),
         };
+
+        if details.version.is_none() && details.path.is_none() && details.git.is_none() {
+            warnings.push(format!("warning: dependency ({}) specified without providing a local \
+                                   path, Git repository, or version to use. This will be \
+                                   considered an error in future versions", n));
+        }
+
         let reference = details.branch.clone().map(GitReference::Branch)
             .or_else(|| details.tag.clone().map(GitReference::Tag))
             .or_else(|| details.rev.clone().map(GitReference::Rev))

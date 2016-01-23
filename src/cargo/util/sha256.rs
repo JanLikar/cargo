@@ -3,7 +3,8 @@ pub use self::imp::Sha256;
 // Someone upstream will link to OpenSSL, so we don't need to explicitly
 // link to it ourselves. Hence we pick up Sha256 digests from OpenSSL
 #[cfg(not(windows))]
-#[allow(bad_style)]
+// allow improper ctypes because size_t falls under that in old compilers
+#[allow(bad_style, improper_ctypes)]
 mod imp {
     use libc;
 
@@ -35,7 +36,7 @@ mod imp {
                 let ret = Sha256 { ctx: ctx };
                 let n = EVP_DigestInit_ex(ret.ctx, EVP_sha256(), 0 as *mut _);
                 assert_eq!(n, 1);
-                return ret;
+                ret
             }
         }
 
@@ -54,7 +55,7 @@ mod imp {
                 let n = EVP_DigestFinal_ex(self.ctx, ret.as_mut_ptr(), &mut out);
                 assert_eq!(n, 1);
                 assert_eq!(out, 32);
-                return ret;
+                ret
             }
         }
     }
@@ -103,7 +104,7 @@ mod imp {
                 CryptCreateHash(ret.hcryptprov, CALG_SHA_256,
                                 0, 0, &mut ret.hcrypthash)
             });
-            return ret;
+            ret
         }
 
         pub fn update(&mut self, bytes: &[u8]) {
@@ -121,7 +122,7 @@ mod imp {
                                   &mut len, 0)
             });
             assert_eq!(len as usize, ret.len());
-            return ret;
+            ret
         }
     }
 

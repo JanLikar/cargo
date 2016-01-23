@@ -487,7 +487,7 @@ impl<'cfg> Registry for RegistrySource<'cfg> {
             let mut summaries = try!(self.summaries(dep.name())).iter().map(|s| {
                 s.0.clone()
             }).collect::<Vec<_>>();
-            if try!(summaries.query(dep)).len() == 0 {
+            if try!(summaries.query(dep)).is_empty() {
                 try!(self.do_update());
             }
         }
@@ -505,7 +505,8 @@ impl<'cfg> Registry for RegistrySource<'cfg> {
         // version requested (agument to `--precise`).
         summaries.retain(|s| {
             match self.source_id.precise() {
-                Some(p) if p.starts_with(dep.name()) => {
+                Some(p) if p.starts_with(dep.name()) &&
+                           p[dep.name().len()..].starts_with("=") => {
                     let vers = &p[dep.name().len() + 1..];
                     s.version().to_string() == vers
                 }
@@ -561,7 +562,7 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         for src in self.sources.values() {
             ret.extend(try!(src.get(packages)).into_iter());
         }
-        return Ok(ret);
+        Ok(ret)
     }
 
     fn fingerprint(&self, pkg: &Package) -> CargoResult<String> {
