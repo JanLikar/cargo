@@ -138,3 +138,21 @@ all path dependencies must have a version specified when publishing.
 dependency `bar` does not specify a version
 "));
 });
+
+test!(private_crate {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            private = true
+        "#)
+        .file("src/main.rs", "fn main() {}");
+
+    assert_that(p.cargo_process("publish"),
+                execs().with_status(101).with_stderr("\
+private crates cannot be published to this repository.
+`foo` is a private crate
+"));
+});
